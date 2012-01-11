@@ -210,3 +210,13 @@ DB_LOCALIZE = {
 #    # may use.
 #    ('media/js/**.js', 'javascript'),
 # ]
+
+# Extra places where South can look for migrations
+SOUTH_MIGRATION_MODULES = {
+    'auth': 'affiliates.migrations.auth',
+}
+
+# Extra places to look for fixtures
+FIXTURE_DIRS = (
+    path('fixtures'),
+)
