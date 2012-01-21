@@ -7,15 +7,15 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core import mail
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.template.loader import render_to_string
-from django.utils.translation import get_language
 
+from funfactory.urlresolvers import reverse
 from product_details import product_details
 from tower import ugettext_lazy as _lazy
 
-from shared.models import ModelBase, LocaleField
+from badges.models import BadgeInstance
+from shared.models import ModelBase
 from users.utils import hash_password
 
 
@@ -30,7 +30,9 @@ ACTIVATION_EMAIL_SUBJECT = _lazy('Please activate your Firefox Affiliates '
 
 # Extra User Methods
 def has_created_badges(self):
-    return self.badgeinstance_set.count() > 0
+    """Return whether a user has created a badge or not. Bypasses cache."""
+    badge_count = BadgeInstance.objects.no_cache().filter(user=self).count()
+    return badge_count > 0
 User.add_to_class('has_created_badges', has_created_badges)
 
 
@@ -61,8 +63,6 @@ class UserProfile(ModelBase):
                                    verbose_name=_lazy(u'Zip or Postal Code'))
     country = models.CharField(max_length=2, choices=COUNTRIES, blank=True,
                                verbose_name=_lazy(u'Country'))
-
-    locale = LocaleField(verbose_name=_lazy(u'Locale'))
 
     def __unicode__(self):
         return unicode(self.display_name)
@@ -121,8 +121,7 @@ class RegisterManager(models.Manager):
                         is_active=True)
             user.save()
             UserProfile.objects.create(user=user,
-                                       display_name=reg_profile.display_name,
-                                       locale=get_language().lower())
+                                       display_name=reg_profile.display_name)
             reg_profile.delete()
             return user
 

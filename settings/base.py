@@ -7,7 +7,7 @@ SYSLOG_TAG = "http_app_affiliates"  # Make this unique to your project.
 
 # Language settings
 PROD_LANGUAGES = ('cs', 'de', 'en-US', 'es', 'fr', 'fy-NL', 'nl', 'pl',
-                  'pt-BR', 'sl', 'zh-TW')
+                  'pt-BR', 'sl', 'sq', 'zh-TW')
 
 # Email settings
 DEFAULT_FROM_EMAIL = 'notifications@affiliates.mozilla.org'
@@ -36,6 +36,7 @@ def LOCALE_IMAGE_PATH(instance, filename):
     return 'uploads/locale_images/%s/%s' % (instance.locale, filename)
 BANNER_IMAGE_PATH = 'uploads/banners/'
 
+# Default image for badge previews to fall back on
 DEFAULT_BADGE_PREVIEW = MEDIA_URL + 'img/template/default-preview.png'
 
 # CDN for absolutify
@@ -71,6 +72,31 @@ SERIALIZATION_MODULES = {
 }
 SMUGGLER_FORMAT = 'json_files'
 
+# Email subscription config
+BASKET_URL = 'https://basket.mozilla.com'
+BASKET_NEWSLETTER = 'mozilla-and-you'
+
+# CSP Config
+CSP_EXCLUDE_URL_PREFIXES = ('/admin',)
+CSP_SCRIPT_SRC = (
+    '\'self\'',
+    'https://browserid.org',
+    'https://statse.webtrendslive.com'
+)
+CSP_FRAME_SRC = (
+    '\'self\'',
+    'https://browserid.org'
+)
+CSP_IMG_SRC = (
+    '\'self\'',
+    'https://affiliates-cdn.mozilla.org',
+    'https://statse.webtrendslive.com'
+)
+CSP_FONT_SRC = (
+    '\'self\'',
+    'https://www.mozilla.org'
+)
+
 # Bundles is a dictionary of two dictionaries, css and js, which list css files
 # and js files that can be bundled together by the minify app.
 MINIFY_BUNDLES = {
@@ -80,6 +106,7 @@ MINIFY_BUNDLES = {
             'css/styles.css',
             'css/uniform.default.css',
             'css/affiliates.css',
+            'css/my_banners.css',
         ),
         'home': (
             'css/home.css',
@@ -90,10 +117,14 @@ MINIFY_BUNDLES = {
         '404': (
             'css/404.css',
         ),
+        'banners': (
+            'css/banners.css',
+        ),
     },
     'js': {
         'common': (
             'js/libs/jquery-1.7.1.js',
+            'js/libs/underscore.js',
             'global/js/nav-main.js',
             'js/libs/jquery.placeholder.min.js',
             'js/libs/jquery.uniform.min.js',
@@ -117,6 +148,8 @@ INSTALLED_APPS = list(INSTALLED_APPS) + [
     'shared',
     'news',
     'users',
+
+    'csp',
     'django_extensions',
     'smuggler',
     'cronjobs',
@@ -129,6 +162,11 @@ INSTALLED_APPS = list(INSTALLED_APPS) + [
 MIDDLEWARE_CLASSES = list(MIDDLEWARE_CLASSES) + [
     'commonware.middleware.StrictTransportMiddleware',
     'commonware.middleware.ScrubRequestOnException',
+    'csp.middleware.CSPMiddleware',
+]
+
+TEMPLATE_CONTEXT_PROCESSORS = list(TEMPLATE_CONTEXT_PROCESSORS) + [
+    'shared.context_processors.l10n'
 ]
 
 # Add Jingo loader
@@ -164,35 +202,6 @@ LOGGING = {
 
 # Don't serve media by default
 SERVE_MEDIA = False
-
-DB_LOCALIZE = {
-    'badges': {
-        'Category': {
-            'comments': ['Category of badges to choose from.'],
-            'attrs': ['name']
-        },
-        'Subcategory': {
-            'comments': ['Subcategory of badges to choose from.'],
-            'attrs': ['name']
-        },
-        'Badge': {
-            'comments': ['Badge that user can display on their website.'],
-            'attrs': ['name']
-        },
-    },
-    'banners': {
-        'BannerImage': {
-            'comments': ['Color for badge images.'],
-            'attrs': ['color']
-        },
-    },
-    'news': {
-        'NewsItem': {
-            'comments': ['Site news/notifications shown to users.'],
-            'attrs': ['title', 'content']
-        }
-    }
-}
 
 # Tells the extract script what files to look for L10n in and what function
 # handles the extraction. The Tower library expects this.

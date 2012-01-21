@@ -2,15 +2,16 @@ from django.conf import settings
 from django.db import models
 
 import jingo
-from caching.base import CachingManager, CachingMixin, CachingQuerySet
+from caching.base import CachingManager, CachingMixin
 from funfactory.manage import path
 from funfactory.urlresolvers import reverse
+from jinja2 import Markup
 from tower import ugettext_lazy as _lazy
 
 from badges.models import Badge, BadgeInstance
 from banners import COLOR_CHOICES
 from shared.models import LocaleField, ModelBase
-from shared.utils import absolutify
+from shared.utils import absolutify, ugettext_locale as _locale
 
 
 # L10n: Width and height are the width and height of an image.
@@ -32,40 +33,17 @@ class Banner(Badge):
         return reverse('banners.customize', kwargs={'banner_pk': self.pk})
 
 
-class BannerImageQuerySet(CachingQuerySet):
-    def size_color_to_image_map(self):
-        """
-        Return a dictionary that maps sizes and colors to these banner images.
-        """
-        banner_images = {}
-        for img in self:
-            if img.size not in banner_images:
-                banner_images[img.size] = {}
-
-            banner_images[img.size][img.localized('color')] = {
-                'image_url': absolutify(img.image.url, cdn=True),
-                'pk': img.pk
-            }
-
-        return banner_images
-
-    def size_to_color_map(self):
-        """
-        Return a dict that maps sizes to colors available for those sizes.
-        """
-        size_colors = {}
-        for img in self:
-            if img.size not in size_colors:
-                size_colors[img.size] = []
-            size_colors[img.size].append(img.localized('color'))
-
-        return size_colors
-
-
 class BannerImageManager(CachingManager):
-    def get_query_set(self):
-        """Overrides the default QuerySet class with a custom one."""
-        return BannerImageQuerySet(self.model, using=self._db)
+    def customize_values(self, **kwargs):
+        """Retrieve data needed for banner customization."""
+        return [{
+            'pk': img.pk,
+            'size': img.size,
+            'area': img.image.width * img.image.height,
+            'color': img.color,
+            'url': img.image.url,
+            'language': settings.LANGUAGES[img.locale]
+            } for img in self.filter(**kwargs)]
 
 
 class BannerImage(CachingMixin, ModelBase):
@@ -97,14 +75,23 @@ class BannerInstance(BadgeInstance):
     image = models.ForeignKey(BannerImage)
 
     details_template = 'banners/details.html'
+    objects = CachingManager()
 
-    def render(self):
+    @property
+    def preview(self):
+        """Return the HTML to preview this banner."""
+        return Markup('<img src="%s" alt="%s">' % (self.image.image.url,
+                                                   _lazy(self.badge.name)))
+
+    @property
+    def code(self):
+        """Return the code to embed this banner.."""
         return jingo.env.from_string(BANNER_TEMPLATE).render({
             'url': self.affiliate_link(),
-            'img': absolutify(self.image.image.url)
+            'img': absolutify(self.image.image.url),
+            'alt_text': _locale(self.badge.name, self.image.locale)
         })
 
     def affiliate_link(self):
-        return reverse('banners.link', kwargs={'user_id': self.user.pk,
-                                               'banner_id': self.badge.pk,
-                                               'banner_img_id': self.image.pk})
+        link = reverse('banners.link', kwargs={'banner_instance_id': self.pk})
+        return absolutify(link)

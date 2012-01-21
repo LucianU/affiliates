@@ -1,51 +1,84 @@
 $(function() {
-    // TODO: Support multiple levels
-    function make_select_dependent(parent, child, choices) {
-        var $parent = $(parent), $child = $(child);
+    var $preview = $('#preview'),
+        $size = $('#size'),
+        $color = $('#color'),
+        $language = $('#language'),
+        $form_image = $('#id_image'),
+        banner_images = $preview.data('images'),
+        banner_alt = $preview.data('alt'),
+        banner_template = '<img src="{{ img }}" alt="{{ alt }}">';
 
-        for (var choice in choices) {
-            if (choices.hasOwnProperty(choice)) {
-                $parent.append('<option value="'+choice+'">'+choice+'</option>');
-            }
+    // Populate a select dropdown
+    function set_options($list, options) {
+        $list.empty();
+        for (var k = 0; k < options.length; k++) {
+            $list.append('<option value="' + options[k] + '">' + options[k] +
+                         '</option>');
         }
-
-        $parent.change(function(e) {
-            var self = $(this);
-            if (choices[self.val()] instanceof Array) {
-                var child_choices = choices[self.val()];
-                $child.empty();
-                for (var k = 0; k < child_choices.length; k++) {
-                    $child.append('<option value="'+child_choices[k]+'">' +
-                                  child_choices[k]+'</option>');
-                }
-            }
-            $.uniform.update();
-        }).change();
     }
 
-    var preview = $('#banner_preview'),
-        badge_code = $('#badge_code'),
-        size = $('#size'),
-        color = $('#color'),
-        banner_images = preview.data('images'),
-        template = preview.data('template');
+    // Update the banner preview to match the current options
+    function update_image() {
+        var language = $language.val(),
+            size = $size.val(),
+            color = $color.val();
 
-    make_select_dependent(size, color, size.data('choices'));
-
-    function generate_affiliate_url(banner_img_id) {
-        return Mustache.to_html(preview.data('affiliate-link'),
-                                {banner_img_id: banner_img_id});
-    }
-
-    size.add(color).change(function(e) {
-        var banner_img = banner_images[size.val()][color.val()];
-        var url = generate_affiliate_url(banner_img['pk']);
-        var banner = Mustache.to_html(preview.data('template'), {
-            url: url,
-            img: banner_img['image_url']
+        var image = _.find(banner_images, function(img) {
+            return img.color === color
+                && img.size === size
+                && img.language === language;
         });
-        
-        preview.html(banner);
-        badge_code.val(banner);
+
+        if (image !== undefined) {
+            $preview.html(Mustache.to_html(banner_template, {
+                img: image.url,
+                alt: banner_alt
+            }));
+            $form_image.val(image.pk);
+        }
+    }
+
+    // Populate the languages dropdown
+    var languages = _(banner_images).chain()
+            .map(function(img){return img.language;})
+            .uniq().value();
+    set_options($language, languages);
+    $language.val($('html').data('language'));
+    $.uniform.update();
+
+    // When language changes, populate the size dropdown
+    $language.change(function(e) {
+        var lang = $language.val(),
+            sizes = _(banner_images).chain()
+                .filter(function(img){return img.language === lang;})
+                .sortBy(function(img) { return img.area; })
+                .map(function(img){return img.size;})
+                .uniq(true) // true = already sorted = faster algorithm
+                .value();
+
+        set_options($size, sizes);
+        $size.change();
     }).change();
+
+    // When size changes, populate the color dropdown
+    $size.change(function(e) {
+        var size = $size.val(),
+            lang = $language.val(),
+            colors = _(banner_images).chain()
+                .filter(function(img) {return img.size === size &&
+                                       img.language === lang;})
+                .map(function(img) { return img.color; })
+                .sortBy(_.identity)
+                .uniq(true)
+                .value();
+
+        set_options($color, colors);
+        $.uniform.update();
+        update_image();
+    }).change();
+
+    // When color changes... update the image.
+    $color.change(function(e) {
+        update_image();
+    });
 });

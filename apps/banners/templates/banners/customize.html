@@ -1,22 +1,41 @@
 {% extends 'badges/new_badge/step3.html' %}
-{% block preview %}
-<div id="banner_preview"
-     data-affiliate-link="{{ affiliate_link }}"
-     data-images="{{ json_banner_images }}"
-     data-template="{{ template }}">
-</div>
+{% import 'badges/include/macros.html' as macros %}
+
+{% block customize %}
+  <form method="post">
+    {{ csrf() }}
+    <div class="customize">
+      {{ form.image }}
+      <ul id="banner_options" class="clearfix">
+        <li>
+          <label for="language">{{ _('Language') }}</label>
+          <select id="language" class="js_uniform"></select>
+        </li>
+        <li>
+          <label for="size">{{ _('Size') }}</label>
+          <select id="size" class="js_uniform"></select>
+        </li>
+        <li>
+          <label for="color">{{ _('Color') }}</label>
+          <select id="color" class="js_uniform"></select>
+        </li>
+      </ul>
+      <div id="preview" data-images="{{ banner_images }}" data-alt="{{ _(banner.name) }}"></div>
+    </div>
+    {% call macros.wizard_footer(back_href=back_href) %}
+      <button type="submit" class="save_changes">
+        {{ _('Save Banner &raquo;') }}
+      </button>
+    {% endcall %}
+  </form>
 {% endblock %}
-{% block custom_parameters %}
-  <div class="fields short">
-    <h4>{{ _('Size') }}</h4>
-    <select id="size" class="js_uniform" data-choices="{{ json_size_colors }}"></select>
-  </div>
-  <div class="fields">
-    <h4>{{ _('Color') }}</h4>
-    <select id="color" class="js_uniform"></select>
-  </div>
+
+{% block site_css %}
+  {{ super() }}
+  {{ css('banners') }}
 {% endblock %}
+
 {% block site_js %}
-{{ super() }}
-{{ js('banners') }}
+  {{ super() }}
+  {{ js('banners') }}
 {% endblock %}

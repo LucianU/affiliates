@@ -5,6 +5,7 @@ from django.contrib.sites.models import Site
 from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.utils.translation import get_language
 
+import tower
 from babel.core import Locale, UnknownLocaleError
 from funfactory.urlresolvers import reverse
 from product_details import product_details
@@ -32,6 +33,7 @@ def unicode_choice_sorted(choices):
     """
     return sorted(choices, cmp=lambda x, y: locale.strcoll(x[1], y[1]))
 
+
 def country_choices():
     """Return a localized, sorted list of tuples of country names and values."""
     items = product_details.get_regions(get_language()).items()
@@ -39,7 +41,7 @@ def country_choices():
     return unicode_choice_sorted(items)
 
 
-def redirect(to, permanent=False, **kwargs):
+def redirect(to, permanent=False, anchor=None, **kwargs):
     """
     Returns a redirect response by applying funfactory's locale-aware reverse
     to the given string.
@@ -52,7 +54,11 @@ def redirect(to, permanent=False, **kwargs):
     else:
         redirect_class = HttpResponseRedirect
 
-    return redirect_class(reverse(to, **kwargs))
+    url = reverse(to, **kwargs)
+    if anchor:
+        url = '#'.join([url, anchor])
+
+    return redirect_class(url)
 
 
 def current_locale():
@@ -65,3 +71,13 @@ def current_locale():
     except UnknownLocaleError:
         # Default to en-US
         return Locale('en', 'US')
+
+
+def ugettext_locale(message, locale):
+    """Translate a message in a specific locale."""
+    old_locale = get_language()
+    tower.activate(locale)
+    text = tower.ugettext(message)
+    tower.activate(old_locale)
+
+    return text

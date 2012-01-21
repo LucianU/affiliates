@@ -29,7 +29,7 @@
 {% macro wizard_li(item, url) %}
   <li class="options selected">
     <a href="{{ url }}">
-      <img src="{{ item.preview_img_url(user.userprofile.locale) }}" alt="{{ item.localized('name') }}">
+      <img src="{{ item.preview_img_url(LOCALE) }}" alt="{{ item.localized('name') }}">
       <div class="description">
         <p>{{ item.localized('name')|clean(tags=['span']) }}</p>
       </div>
@@ -42,6 +42,9 @@
     {% if back_href is defined %}
       <a class="back" href="{{ back_href }}">{{ _('&laquo; Back') }}</a>
     {% endif %}
+    {% if caller %}
+      {{ caller() }}
+    {% endif %}
   </div>
 {% endmacro %}
 
@@ -50,9 +53,9 @@
     <h4>{{ name }}</h4>
     <ul>
       {% for instance in instances %}
-        <li class="banner_cols">
+        <li id="banner_{{ instance.pk }}" class="banner_cols">
           <div class="col_1">{{ loop.index }}</div>
-          <div class="col_2">{{ instance.render()|safe }}</div>
+          <div class="col_2">{{ instance.preview }}</div>
           <div class="col_3">
             <ul class="banner_info">
               <li>
@@ -68,6 +71,10 @@
                 <p><a href="{{ instance.badge.href }}">{{ instance.badge.href }}</a></p>
               </li>
               {% include instance.details_template() ignore missing %}
+              <li>
+                <h5>{{ _('EMBED CODE:') }}</h5>
+                <p><textarea class="embed-code" readonly="readonly">{{ instance.code }}</textarea></p>
+              </li>
             </ul>
           </div>
         </li>
